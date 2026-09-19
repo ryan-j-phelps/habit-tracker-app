@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit & Sleep Accountability Partner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for Sleep Trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .badge-green { background-color: #10B981; color: white; }
+        .badge-amber { background-color: #F59E0B; color: white; }
+        .badge-red { background-color: #EF4444; color: white; }
+        .badge-gray { background-color: #9CA3AF; color: white; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Header Navigation -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md">
+                    <i class="fa-solid fa-bullseye text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">Habit Partner</h1>
+                    <p class="text-xs text-slate-500 font-medium">Daily Accountability & Sleep Tracker</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="exportData()" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i> Export JSON
+                </button>
+                <label class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-upload"></i> Import JSON
+                    <input type="file" id="importFile" onchange="importData(event)" class="hidden" accept=".json">
+                </label>
+                <button onclick="openSettingsModal()" class="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear"></i> Target Times
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Top Section: Habit Metrics Grid -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-slate-900">Habit Performance Overview</h2>
+                <span class="text-xs font-medium text-slate-500">Calculated across historical logs</span>
+            </div>
+            <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <!-- Stat Cards generated dynamically -->
+            </div>
+        </section>
+
+        <!-- Trend Charts Section (Last 4 Weeks Data) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-sun text-amber-500"></i>
+                        <h3 class="text-sm font-bold text-slate-800">Wake Up Time Trend</h3>
+                    </div>
+                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
+                </div>
+                <div class="h-48">
+                    <canvas id="wakeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-moon text-indigo-500"></i>
+                        <h3 class="text-sm font-bold text-slate-800">Bed Time Trend</h3>
+                    </div>
+                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
+                </div>
+                <div class="h-48">
+                    <canvas id="bedChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Body: Input Form (Left) & Historical Data Table (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Daily Logging Form -->
+            <section class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit">
+                <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900">Daily Logger</h2>
+                    <input type="date" id="selectedDate" class="bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <form id="habitForm" onsubmit="saveDailyEntry(event)" class="space-y-5">
+                    <!-- Time Targets Group -->
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Sleep & Wake Times</label>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                    <i class="fa-solid fa-sun text-amber-500"></i> Wake Up Time
+                                </span>
+                                <span id="targetWakeLabel" class="text-xs text-slate-400">Target: 07:00</span>
+                            </div>
+                            <input type="time" id="inputWake" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                    <i class="fa-solid fa-moon text-indigo-500"></i> Bed Time
+                                </span>
+                                <span id="targetSleepLabel" class="text-xs text-slate-400">Target: 23:00</span>
+                            </div>
+                            <input type="time" id="inputSleep" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Daily Actions Group -->
+                    <div class="space-y-4 pt-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Daily Action Habits</label>
+
+                        <div class="habit-status-group" data-habit="fruit">
+                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                <i class="fa-solid fa-apple-whole text-red-500"></i> Eat Fruit
+                            </span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setStatus('fruit', 'Done')" id="btn-fruit-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                <button type="button" onclick="setStatus('fruit', 'Skipped')" id="btn-fruit-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                <button type="button" onclick="setStatus('fruit', 'Missed')" id="btn-fruit-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                            </div>
+                        </div>
+
+                        <div class="habit-status-group" data-habit="noSocial">
+                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                <i class="fa-solid fa-mobile-screen-button text-teal-600"></i> No Social > 9pm
+                            </span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setStatus('noSocial', 'Done')" id="btn-noSocial-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                <button type="button" onclick="setStatus('noSocial', 'Skipped')" id="btn-noSocial-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                <button type="button" onclick="setStatus('noSocial', 'Missed')" id="btn-noSocial-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                            </div>
+                        </div>
+
+                        <div class="habit-status-group" data-habit="floss">
+                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                <i class="fa-solid fa-tooth text-blue-400"></i> Flossing Before Bed
+                            </span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setStatus('floss', 'Done')" id="btn-floss-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                <button type="button" onclick="setStatus('floss', 'Skipped')" id="btn-floss-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                <button type="button" onclick="setStatus('floss', 'Missed')" id="btn-floss-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                            </div>
+                        </div>
+
+                        <div class="habit-status-group" data-habit="read">
+                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                <i class="fa-solid fa-book-open text-purple-500"></i> Reading Before Bed
+                            </span>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setStatus('read', 'Done')" id="btn-read-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                <button type="button" onclick="setStatus('read', 'Skipped')" id="btn-read-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                <button type="button" onclick="setStatus('read', 'Missed')" id="btn-read-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-indigo-100 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Save Daily Entry
+                    </button>
+                </form>
+            </section>
+
+            <!-- Historical Log Table -->
+            <section class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900">Historical Log</h2>
+                    <span id="historyCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">0 entries</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-slate-400 text-xs uppercase font-semibold">
+                                <th class="pb-3 px-2">Date</th>
+                                <th class="pb-3 px-2">Wake Up</th>
+                                <th class="pb-3 px-2">Bedtime</th>
+                                <th class="pb-3 px-2">Fruit</th>
+                                <th class="pb-3 px-2">No Social</th>
+                                <th class="pb-3 px-2">Floss</th>
+                                <th class="pb-3 px-2">Read</th>
+                                <th class="pb-3 px-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-100">
+                            <!-- Dynamic history rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal for Daily Target Configurations -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl border border-slate-100 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+                <h3 class="text-lg font-bold text-slate-900">Daily Target Times Configuration</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="overflow-y-auto space-y-4 pr-1">
+                <p class="text-xs text-slate-500">Set custom wake and bedtime goals for each day of the week.</p>
+                
+                <div id="dayTargetsContainer" class="space-y-3">
+                    <!-- Render Target Inputs dynamically for all 7 days -->
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-lg text-xs text-slate-500 space-y-1">
+                    <span class="font-bold block text-slate-600">RAG Rating Rules:</span>
+                    <p><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span><b>Green:</b> Before target or within 5 mins after</p>
+                    <p><span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1"></span><b>Amber:</b> Within 30 mins after target</p>
+                    <p><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span><b>Red:</b> More than 30 mins after target</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6 pt-3 border-t border-slate-100">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">Save Targets</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        const HABITS = [
+            { id: 'wake', name: 'Wake Up', icon: 'fa-sun', type: 'time' },
+            { id: 'sleep', name: 'Bed Time', icon: 'fa-moon', type: 'time' },
+            { id: 'fruit', name: 'Eat Fruit', icon: 'fa-apple-whole', type: 'action' },
+            { id: 'noSocial', name: 'No Social > 9pm', icon: 'fa-mobile-screen-button', type: 'action' },
+            { id: 'floss', name: 'Flossing', icon: 'fa-tooth', type: 'action' },
+            { id: 'read', name: 'Reading', icon: 'fa-book-open', type: 'action' }
+        ];
+
+        let state = {
+            targets: {
+                0: { wake: "08:00", sleep: "23:00" },
+                1: { wake: "07:00", sleep: "22:30" },
+                2: { wake: "07:00", sleep: "22:30" },
+                3: { wake: "07:00", sleep: "22:30" },
+                4: { wake: "07:00", sleep: "22:30" },
+                5: { wake: "07:00", sleep: "23:30" },
+                6: { wake: "08:00", sleep: "23:30" }
+            },
+            logs: {},
+            currentForm: { fruit: null, noSocial: null, floss: null, read: null }
+        };
+
+        let wakeChartInstance = null;
+        let bedChartInstance = null;
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            
+            const dateInput = document.getElementById('selectedDate');
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+            dateInput.addEventListener('change', handleDateChange);
+
+            updateTargetLabels();
+            loadEntryForDate(today);
+            renderStats();
+            renderCharts();
+            renderHistory();
+        };
+
+        function loadFromLocalStorage() {
+            const savedTargets = localStorage.getItem('habit_targets_v2');
+            if (savedTargets) state.targets = JSON.parse(savedTargets);
+
+            const savedLogs = localStorage.getItem('habit_logs_v2');
+            if (savedLogs) state.logs = JSON.parse(savedLogs);
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('habit_targets_v2', JSON.stringify(state.targets));
+            localStorage.setItem('habit_logs_v2', JSON.stringify(state.logs));
+        }
+
+        function getTargetForDate(dateStr, type) {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = dateObj.getDay();
+            return state.targets[dayOfWeek] ? state.targets[dayOfWeek][type] : "07:00";
+        }
+
+        function updateTargetLabels() {
+            const dateStr = document.getElementById('selectedDate').value;
+            if (!dateStr) return;
+            
+            const wakeTarget = getTargetForDate(dateStr, 'wake');
+            const sleepTarget = getTargetForDate(dateStr, 'sleep');
+
+            document.getElementById('targetWakeLabel').innerText = `Target: ${wakeTarget}`;
+            document.getElementById('targetSleepLabel').innerText = `Target: ${sleepTarget}`;
+        }
+
+        function openSettingsModal() {
+            const container = document.getElementById('dayTargetsContainer');
+            container.innerHTML = '';
+            const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+
+            dayOrder.forEach(dayIdx => {
+                const dayName = DAYS[dayIdx];
+                const target = state.targets[dayIdx] || { wake: "07:00", sleep: "22:30" };
+
+                const row = document.createElement('div');
+                row.className = "grid grid-cols-3 gap-2 items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+                row.innerHTML = `
+                    <span class="font-bold text-slate-700">${dayName}</span>
+                    <div>
+                        <label class="text-[10px] text-slate-400 block">Wake Target</label>
+                        <input type="time" id="target-wake-${dayIdx}" value="${target.wake}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-400 block">Bedtime Target</label>
+                        <input type="time" id="target-sleep-${dayIdx}" value="${target.sleep}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-slate-800">
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('settingsModal').classList.add('flex');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('settingsModal').classList.remove('flex');
+        }
+
+        function saveSettings() {
+            for (let i = 0; i < 7; i++) {
+                const wakeVal = document.getElementById(`target-wake-${i}`).value || "07:00";
+                const sleepVal = document.getElementById(`target-sleep-${i}`).value || "22:30";
+                state.targets[i] = { wake: wakeVal, sleep: sleepVal };
+            }
+            saveToLocalStorage();
+            updateTargetLabels();
+            closeSettingsModal();
+            renderStats();
+            renderCharts();
+            renderHistory();
+        }
+
+        function evaluateTimeHabit(actualTime, targetTime) {
+            if (!actualTime) return { status: 'None', label: 'Unrecorded', class: 'badge-gray' };
+
+            const actualMins = timeToMinutes(actualTime);
+            const targetMins = timeToMinutes(targetTime);
+            const delay = actualMins - targetMins;
+
+            if (delay <= 5) {
+                return { status: 'Green', label: actualTime, class: 'badge-green', color: '#10B981' };
+            } else if (delay <= 30) {
+                return { status: 'Amber', label: actualTime, class: 'badge-amber', color: '#F59E0B' };
+            } else {
+                return { status: 'Red', label: actualTime, class: 'badge-red', color: '#EF4444' };
+            }
+        }
+
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function handleDateChange(e) {
+            updateTargetLabels();
+            loadEntryForDate(e.target.value);
+        }
+
+        function setStatus(habit, status) {
+            if (state.currentForm[habit] === status) {
+                state.currentForm[habit] = null;
+            } else {
+                state.currentForm[habit] = status;
+            }
+            
+            const buttons = document.querySelectorAll(`[data-habit="${habit}"] .status-btn`);
+            buttons.forEach(btn => {
+                btn.className = 'status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors';
+            });
+
+            const activeStatus = state.currentForm[habit];
+            if (activeStatus) {
+                const selectedBtn = document.getElementById(`btn-${habit}-${activeStatus}`);
+                if (selectedBtn) {
+                    if (activeStatus === 'Done') selectedBtn.className = 'status-btn py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-lg';
+                    if (activeStatus === 'Skipped') selectedBtn.className = 'status-btn py-1.5 text-xs font-medium bg-slate-500 text-white rounded-lg';
+                    if (activeStatus === 'Missed') selectedBtn.className = 'status-btn py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg';
+                }
+            }
+        }
+
+        function loadEntryForDate(dateStr) {
+            const entry = state.logs[dateStr] || {};
+            
+            document.getElementById('inputWake').value = entry.wake || '';
+            document.getElementById('inputSleep').value = entry.sleep || '';
+
+            ['fruit', 'noSocial', 'floss', 'read'].forEach(habit => {
+                state.currentForm[habit] = entry[habit] || null;
+                setStatus(habit, entry[habit] || null);
+            });
+        }
+
+        function saveDailyEntry(e) {
+            e.preventDefault();
+            const dateStr = document.getElementById('selectedDate').value;
+            const existingEntry = state.logs[dateStr] || {};
+
+            const wakeInput = document.getElementById('inputWake').value;
+            const sleepInput = document.getElementById('inputSleep').value;
+
+            state.logs[dateStr] = {
+                wake: wakeInput !== '' ? wakeInput : (existingEntry.wake || null),
+                sleep: sleepInput !== '' ? sleepInput : (existingEntry.sleep || null),
+                fruit: state.currentForm.fruit !== null ? state.currentForm.fruit : (existingEntry.fruit || null),
+                noSocial: state.currentForm.noSocial !== null ? state.currentForm.noSocial : (existingEntry.noSocial || null),
+                floss: state.currentForm.floss !== null ? state.currentForm.floss : (existingEntry.floss || null),
+                read: state.currentForm.read !== null ? state.currentForm.read : (existingEntry.read || null)
+            };
+
+            saveToLocalStorage();
+            renderStats();
+            renderCharts();
+            renderHistory();
+        }
+
+        function calculateHabitStats(habit) {
+            const sortedDates = Object.keys(state.logs).sort();
+            if (sortedDates.length === 0) return { streak: 0, rate: 0 };
+
+            let totalValidDays = 0;
+            let successDays = 0;
+
+            sortedDates.forEach(date => {
+                const val = state.logs[date][habit.id];
+                if (habit.type === 'time') {
+                    if (val) {
+                        const targetTime = getTargetForDate(date, habit.id);
+                        const evaluation = evaluateTimeHabit(val, targetTime);
+                        totalValidDays++;
+                        if (evaluation.status === 'Green') successDays++;
+                    }
+                } else {
+                    if (val && val !== 'Skipped') {
+                        totalValidDays++;
+                        if (val === 'Done') successDays++;
+                    }
+                }
+            });
+
+            let streak = 0;
+            const datesDescending = [...sortedDates].reverse();
+
+            for (let dateKey of datesDescending) {
+                const val = state.logs[dateKey][habit.id];
+
+                if (!val) break;
+
+                if (habit.type === 'time') {
+                    const targetTime = getTargetForDate(dateKey, habit.id);
+                    const evalRes = evaluateTimeHabit(val, targetTime);
+                    if (evalRes.status === 'Green') {
+                        streak++;
+                    } else {
+                        break;
+                    }
+                } else {
+                    if (val === 'Done') {
+                        streak++;
+                    } else if (val === 'Skipped') {
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            const rate = totalValidDays > 0 ? Math.round((successDays / totalValidDays) * 100) : 0;
+            return { streak, rate };
+        }
+
+        function renderStats() {
+            const statsContainer = document.getElementById('statsGrid');
+            statsContainer.innerHTML = '';
+
+            HABITS.forEach(habit => {
+                const { streak, rate } = calculateHabitStats(habit);
+                
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid ${habit.icon} text-slate-500"></i>
+                        <span class="text-xs font-bold text-slate-700 truncate">${habit.name}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <div>
+                            <span class="text-xl font-extrabold text-slate-900">${streak}</span>
+                            <span class="text-[10px] text-slate-400 font-medium">d streak</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold ${rate >= 75 ? 'text-emerald-600' : 'text-amber-600'}">${rate}%</span>
+                            <span class="text-[10px] block text-slate-400">success</span>
+                        </div>
+                    </div>
+                `;
+                statsContainer.appendChild(card);
+            });
+        }
+
+        // Helper function to format date strings to e.g., "Mon 14th"
+        function formatChartLabel(dateStr) {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = SHORT_DAYS[dateObj.getDay()];
+            const dayNum = dateObj.getDate();
+
+            let suffix = 'th';
+            if (dayNum % 10 === 1 && dayNum !== 11) suffix = 'st';
+            else if (dayNum % 10 === 2 && dayNum !== 12) suffix = 'nd';
+            else if (dayNum % 10 === 3 && dayNum !== 13) suffix = 'rd';
+
+            return `${dayOfWeek} ${dayNum}${suffix}`;
+        }
+
+        // Render Trend Line Charts using Chart.js (Restricted to past 4 weeks)
+        function renderCharts() {
+            const sortedDates = Object.keys(state.logs).sort();
+
+            // Determine date threshold for 4 weeks ago (28 days)
+            const fourWeeksAgo = new Date();
+            fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+            const fourWeeksAgoStr = fourWeeksAgo.toISOString().split('T')[0];
+
+            // Filter to only include logs from the past 4 weeks
+            const chartDates = sortedDates.filter(d => d >= fourWeeksAgoStr);
+
+            const wakeData = [];
+            const bedData = [];
+            const labels = [];
+
+            chartDates.forEach(date => {
+                const log = state.logs[date];
+                
+                if (log.wake || log.sleep) {
+                    labels.push(formatChartLabel(date));
+
+                    if (log.wake) {
+                        const target = getTargetForDate(date, 'wake');
+                        const evalRes = evaluateTimeHabit(log.wake, target);
+                        const mins = timeToMinutes(log.wake);
+                        wakeData.push({
+                            x: formatChartLabel(date),
+                            y: mins / 60,
+                            timeStr: log.wake,
+                            color: evalRes.color,
+                            status: evalRes.status
+                        });
+                    } else {
+                        wakeData.push(null);
+                    }
+
+                    if (log.sleep) {
+                        const target = getTargetForDate(date, 'sleep');
+                        const evalRes = evaluateTimeHabit(log.sleep, target);
+                        const mins = timeToMinutes(log.sleep);
+                        bedData.push({
+                            x: formatChartLabel(date),
+                            y: mins / 60,
+                            timeStr: log.sleep,
+                            color: evalRes.color,
+                            status: evalRes.status
+                        });
+                    } else {
+                        bedData.push(null);
+                    }
+                }
+            });
+
+            wakeChartInstance = createTrendChart('wakeChart', wakeChartInstance, labels, wakeData, 'Wake Time');
+            bedChartInstance = createTrendChart('bedChart', bedChartInstance, labels, bedData, 'Bed Time');
+        }
+
+        function createTrendChart(canvasId, chartInstance, labels, dataPoints, labelName) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const pointColors = dataPoints.map(dp => dp ? dp.color : '#9CA3AF');
+
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelName,
+                        data: dataPoints.map(dp => dp ? dp.y : null),
+                        borderColor: '#CBD5E1',
+                        borderWidth: 2,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        tension: 0.2,
+                        spanGaps: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const dp = dataPoints[context.dataIndex];
+                                    if (!dp) return '';
+                                    return `${labelName}: ${dp.timeStr} (${dp.status})`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    const hrs = Math.floor(value);
+                                    const mins = Math.round((value - hrs) * 60);
+                                    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            const dates = Object.keys(state.logs).sort().reverse();
+            document.getElementById('historyCount').innerText = `${dates.length} entries`;
+
+            tbody.innerHTML = '';
+
+            if (dates.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">No entries recorded yet. Use the daily logger to start tracking.</td></tr>`;
+                return;
+            }
+
+            dates.forEach(date => {
+                const log = state.logs[date];
+                const wakeTarget = getTargetForDate(date, 'wake');
+                const sleepTarget = getTargetForDate(date, 'sleep');
+
+                const wakeEval = evaluateTimeHabit(log.wake, wakeTarget);
+                const sleepEval = evaluateTimeHabit(log.sleep, sleepTarget);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-2 font-semibold text-slate-700 text-xs">${date}</td>
+                    <td class="py-3 px-2">${renderBadge(wakeEval.label, wakeEval.class)}</td>
+                    <td class="py-3 px-2">${renderBadge(sleepEval.label, sleepEval.class)}</td>
+                    <td class="py-3 px-2">${renderActionBadge(log.fruit)}</td>
+                    <td class="py-3 px-2">${renderActionBadge(log.noSocial)}</td>
+                    <td class="py-3 px-2">${renderActionBadge(log.floss)}</td>
+                    <td class="py-3 px-2">${renderActionBadge(log.read)}</td>
+                    <td class="py-3 px-2 text-right">
+                        <button onclick="deleteEntry('${date}')" class="text-slate-400 hover:text-red-500 text-xs transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderBadge(text, badgeClass) {
+            if (text === 'Unrecorded') return `<span class="text-xs text-slate-300">-</span>`;
+            return `<span class="px-2 py-0.5 rounded text-[11px] font-semibold ${badgeClass}">${text}</span>`;
+        }
+
+        function renderActionBadge(status) {
+            if (!status) return `<span class="text-xs text-slate-300">-</span>`;
+            let badgeClass = 'badge-gray';
+            if (status === 'Done') badgeClass = 'badge-green';
+            if (status === 'Skipped') badgeClass = 'badge-amber';
+            if (status === 'Missed') badgeClass = 'badge-red';
+            return `<span class="px-2 py-0.5 rounded text-[11px] font-semibold ${badgeClass}">${status}</span>`;
+        }
+
+        function deleteEntry(date) {
+            delete state.logs[date];
+            saveToLocalStorage();
+            renderStats();
+            renderCharts();
+            renderHistory();
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `habit_tracker_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importData(event) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.targets && imported.logs) {
+                        state = imported;
+                        saveToLocalStorage();
+                        updateTargetLabels();
+                        renderStats();
+                        renderCharts();
+                        renderHistory();
+                    }
+                } catch (err) {
+                    console.error("Invalid JSON import format.");
+                }
+            };
+            reader.readAsText(event.target.files[0]);
+        }
+    </script>
+</body>
+</html>
