@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <!-- Prevent Search Engine Indexing -->
     <meta name="robots" content="noindex, nofollow">
-    <meta name="googlebot" content="noindex, nofollow"> 
+    <meta name="googlebot" content="noindex, nofollow">
+
     <title>Habit & Sleep Accountability Partner</title>
+    
+    <!-- Google Identity Services Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -15,6 +20,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for Sleep Trends -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; }
         .badge-green { background-color: #10B981; color: white; }
@@ -25,227 +31,250 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
-    <!-- Header Navigation -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md">
-                    <i class="fa-solid fa-bullseye text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-slate-900 leading-tight">Habit Partner</h1>
-                    <p class="text-xs text-slate-500 font-medium">Daily Accountability & Sleep Tracker</p>
-                </div>
+    <!-- Auth Guard Screen (Visible when NOT logged in) -->
+    <div id="authOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
+        <div class="bg-white max-w-md w-full rounded-2xl p-8 shadow-2xl text-center space-y-6">
+            <div class="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                <i class="fa-solid fa-lock text-2xl"></i>
             </div>
-            <div class="flex items-center space-x-2">
-                <button onclick="exportData()" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5">
-                    <i class="fa-solid fa-download"></i> Export JSON
-                </button>
-                <label class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5">
-                    <i class="fa-solid fa-upload"></i> Import JSON
-                    <input type="file" id="importFile" onchange="importData(event)" class="hidden" accept=".json">
-                </label>
-                <button onclick="openSettingsModal()" class="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1.5">
-                    <i class="fa-solid fa-gear"></i> Target Times
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
-        <!-- Top Section: Habit Metrics Grid -->
-        <section>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-slate-900">Habit Performance Overview</h2>
-                <span class="text-xs font-medium text-slate-500">Calculated across historical logs</span>
-            </div>
-            <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <!-- Stat Cards generated dynamically -->
-            </div>
-        </section>
-
-        <!-- Trend Charts Section (Last 4 Weeks Data) -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-sun text-amber-500"></i>
-                        <h3 class="text-sm font-bold text-slate-800">Wake Up Time Trend</h3>
-                    </div>
-                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
-                </div>
-                <div class="h-48">
-                    <canvas id="wakeChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-moon text-indigo-500"></i>
-                        <h3 class="text-sm font-bold text-slate-800">Bed Time Trend</h3>
-                    </div>
-                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
-                </div>
-                <div class="h-48">
-                    <canvas id="bedChart"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <!-- Main Body: Input Form (Left) & Historical Data Table (Right) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Daily Logging Form -->
-            <section class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit">
-                <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
-                    <h2 class="text-lg font-bold text-slate-900">Daily Logger</h2>
-                    <input type="date" id="selectedDate" class="bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <form id="habitForm" onsubmit="saveDailyEntry(event)" class="space-y-5">
-                    <!-- Time Targets Group -->
-                    <div class="space-y-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Sleep & Wake Times</label>
-
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
-                                    <i class="fa-solid fa-sun text-amber-500"></i> Wake Up Time
-                                </span>
-                                <span id="targetWakeLabel" class="text-xs text-slate-400">Target: 07:00</span>
-                            </div>
-                            <input type="time" id="inputWake" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
-                                    <i class="fa-solid fa-moon text-indigo-500"></i> Bed Time
-                                </span>
-                                <span id="targetSleepLabel" class="text-xs text-slate-400">Target: 23:00</span>
-                            </div>
-                            <input type="time" id="inputSleep" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
-
-                    <!-- Daily Actions Group -->
-                    <div class="space-y-4 pt-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Daily Action Habits</label>
-
-                        <div class="habit-status-group" data-habit="fruit">
-                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
-                                <i class="fa-solid fa-apple-whole text-red-500"></i> Eat Fruit
-                            </span>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" onclick="setStatus('fruit', 'Done')" id="btn-fruit-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
-                                <button type="button" onclick="setStatus('fruit', 'Skipped')" id="btn-fruit-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
-                                <button type="button" onclick="setStatus('fruit', 'Missed')" id="btn-fruit-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
-                            </div>
-                        </div>
-
-                        <div class="habit-status-group" data-habit="noSocial">
-                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
-                                <i class="fa-solid fa-mobile-screen-button text-teal-600"></i> No Social > 9pm
-                            </span>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" onclick="setStatus('noSocial', 'Done')" id="btn-noSocial-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
-                                <button type="button" onclick="setStatus('noSocial', 'Skipped')" id="btn-noSocial-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
-                                <button type="button" onclick="setStatus('noSocial', 'Missed')" id="btn-noSocial-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
-                            </div>
-                        </div>
-
-                        <div class="habit-status-group" data-habit="floss">
-                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
-                                <i class="fa-solid fa-tooth text-blue-400"></i> Flossing Before Bed
-                            </span>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" onclick="setStatus('floss', 'Done')" id="btn-floss-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
-                                <button type="button" onclick="setStatus('floss', 'Skipped')" id="btn-floss-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
-                                <button type="button" onclick="setStatus('floss', 'Missed')" id="btn-floss-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
-                            </div>
-                        </div>
-
-                        <div class="habit-status-group" data-habit="read">
-                            <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
-                                <i class="fa-solid fa-book-open text-purple-500"></i> Reading Before Bed
-                            </span>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" onclick="setStatus('read', 'Done')" id="btn-read-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
-                                <button type="button" onclick="setStatus('read', 'Skipped')" id="btn-read-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
-                                <button type="button" onclick="setStatus('read', 'Missed')" id="btn-read-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-indigo-100 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-check"></i> Save Daily Entry
-                    </button>
-                </form>
-            </section>
-
-            <!-- Historical Log Table -->
-            <section class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
-                    <h2 class="text-lg font-bold text-slate-900">Historical Log</h2>
-                    <span id="historyCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">0 entries</span>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-slate-400 text-xs uppercase font-semibold">
-                                <th class="pb-3 px-2">Date</th>
-                                <th class="pb-3 px-2">Wake Up</th>
-                                <th class="pb-3 px-2">Bedtime</th>
-                                <th class="pb-3 px-2">Fruit</th>
-                                <th class="pb-3 px-2">No Social</th>
-                                <th class="pb-3 px-2">Floss</th>
-                                <th class="pb-3 px-2">Read</th>
-                                <th class="pb-3 px-2 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody" class="divide-y divide-slate-100">
-                            <!-- Dynamic history rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Modal for Daily Target Configurations -->
-    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
-        <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-                <h3 class="text-lg font-bold text-slate-900">Daily Target Times Configuration</h3>
-                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Authentication Required</h2>
+                <p class="text-sm text-slate-500 mt-2">Sign in with Google to access your Habit & Sleep Tracker.</p>
             </div>
             
-            <div class="overflow-y-auto space-y-4 pr-1">
-                <p class="text-xs text-slate-500">Set custom wake and bedtime goals for each day of the week.</p>
-                
-                <div id="dayTargetsContainer" class="space-y-3">
-                    <!-- Render Target Inputs dynamically for all 7 days -->
-                </div>
+            <div id="authErrorMessage" class="hidden text-xs text-red-600 bg-red-50 p-3 rounded-lg font-medium border border-red-200"></div>
 
-                <div class="bg-slate-50 p-3 rounded-lg text-xs text-slate-500 space-y-1">
-                    <span class="font-bold block text-slate-600">RAG Rating Rules:</span>
-                    <p><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span><b>Green:</b> Before target or within 5 mins after</p>
-                    <p><span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1"></span><b>Amber:</b> Within 30 mins after target</p>
-                    <p><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span><b>Red:</b> More than 30 mins after target</p>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 mt-6 pt-3 border-t border-slate-100">
-                <button onclick="closeSettingsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-                <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">Save Targets</button>
+            <!-- Google Sign In Button Target Container -->
+            <div class="flex justify-center pt-2">
+                <div id="googleBtnContainer"></div>
             </div>
         </div>
     </div>
 
+    <!-- Main Application UI (Hidden until authenticated) -->
+    <div id="appUI" class="hidden">
+        <!-- Header Navigation -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md">
+                        <i class="fa-solid fa-bullseye text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900 leading-tight">Habit Partner</h1>
+                        <p class="text-xs text-slate-500 font-medium">Daily Accountability & Sleep Tracker</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <!-- User Account Info & Logout -->
+                    <div id="userInfo" class="flex items-center space-x-2 border-r border-slate-200 pr-3">
+                        <img id="userAvatar" class="w-8 h-8 rounded-full border border-indigo-200" src="" alt="User Avatar">
+                        <span id="userName" class="text-xs font-semibold text-slate-700 hidden sm:inline"></span>
+                    </div>
+                    <button onclick="handleSignOut()" class="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                    </button>
+                    <button onclick="exportData()" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> Export JSON
+                    </button>
+                    <label class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-upload"></i> Import JSON
+                        <input type="file" id="importFile" onchange="importData(event)" class="hidden" accept=".json">
+                    </label>
+                    <button onclick="openSettingsModal()" class="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-gear"></i> Target Times
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <!-- Top Section: Habit Metrics Grid -->
+            <section>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-900">Habit Performance Overview</h2>
+                    <span class="text-xs font-medium text-slate-500">Calculated across historical logs</span>
+                </div>
+                <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                    <!-- Stat Cards generated dynamically -->
+                </div>
+            </section>
+
+            <!-- Trend Charts Section -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-sun text-amber-500"></i>
+                            <h3 class="text-sm font-bold text-slate-800">Wake Up Time Trend</h3>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
+                    </div>
+                    <div class="h-48">
+                        <canvas id="wakeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-moon text-indigo-500"></i>
+                            <h3 class="text-sm font-bold text-slate-800">Bed Time Trend</h3>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Last 4 Weeks</span>
+                    </div>
+                    <div class="h-48">
+                        <canvas id="bedChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Body: Input Form & Historical Table -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Daily Logging Form -->
+                <section class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit">
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-900">Daily Logger</h2>
+                        <input type="date" id="selectedDate" class="bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+
+                    <form id="habitForm" onsubmit="saveDailyEntry(event)" class="space-y-5">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Sleep & Wake Times</label>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                        <i class="fa-solid fa-sun text-amber-500"></i> Wake Up Time
+                                    </span>
+                                    <span id="targetWakeLabel" class="text-xs text-slate-400">Target: 07:00</span>
+                                </div>
+                                <input type="time" id="inputWake" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                        <i class="fa-solid fa-moon text-indigo-500"></i> Bed Time
+                                    </span>
+                                    <span id="targetSleepLabel" class="text-xs text-slate-400">Target: 23:00</span>
+                                </div>
+                                <input type="time" id="inputSleep" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 pt-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Daily Action Habits</label>
+                            <div class="habit-status-group" data-habit="fruit">
+                                <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                    <i class="fa-solid fa-apple-whole text-red-500"></i> Eat Fruit
+                                </span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="setStatus('fruit', 'Done')" id="btn-fruit-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                    <button type="button" onclick="setStatus('fruit', 'Skipped')" id="btn-fruit-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                    <button type="button" onclick="setStatus('fruit', 'Missed')" id="btn-fruit-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                                </div>
+                            </div>
+
+                            <div class="habit-status-group" data-habit="noSocial">
+                                <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                    <i class="fa-solid fa-mobile-screen-button text-teal-600"></i> No Social > 9pm
+                                </span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="setStatus('noSocial', 'Done')" id="btn-noSocial-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                    <button type="button" onclick="setStatus('noSocial', 'Skipped')" id="btn-noSocial-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                    <button type="button" onclick="setStatus('noSocial', 'Missed')" id="btn-noSocial-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                                </div>
+                            </div>
+
+                            <div class="habit-status-group" data-habit="floss">
+                                <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                    <i class="fa-solid fa-tooth text-blue-400"></i> Flossing Before Bed
+                                </span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="setStatus('floss', 'Done')" id="btn-floss-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                    <button type="button" onclick="setStatus('floss', 'Skipped')" id="btn-floss-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                    <button type="button" onclick="setStatus('floss', 'Missed')" id="btn-floss-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                                </div>
+                            </div>
+
+                            <div class="habit-status-group" data-habit="read">
+                                <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
+                                    <i class="fa-solid fa-book-open text-purple-500"></i> Reading Before Bed
+                                </span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="setStatus('read', 'Done')" id="btn-read-Done" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Done</button>
+                                    <button type="button" onclick="setStatus('read', 'Skipped')" id="btn-read-Skipped" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Skipped</button>
+                                    <button type="button" onclick="setStatus('read', 'Missed')" id="btn-read-Missed" class="status-btn py-1.5 text-xs font-medium border border-slate-200 rounded-lg transition-colors">Missed</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-indigo-100 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-check"></i> Save Daily Entry
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Historical Log Table -->
+                <section class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-900">Historical Log</h2>
+                        <span id="historyCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">0 entries</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-400 text-xs uppercase font-semibold">
+                                    <th class="pb-3 px-2">Date</th>
+                                    <th class="pb-3 px-2">Wake Up</th>
+                                    <th class="pb-3 px-2">Bedtime</th>
+                                    <th class="pb-3 px-2">Fruit</th>
+                                    <th class="pb-3 px-2">No Social</th>
+                                    <th class="pb-3 px-2">Floss</th>
+                                    <th class="pb-3 px-2">Read</th>
+                                    <th class="pb-3 px-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="divide-y divide-slate-100">
+                                <!-- Dynamic history rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Target Times Modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl border border-slate-100 max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">Daily Target Times Configuration</h3>
+                    <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                
+                <div class="overflow-y-auto space-y-4 pr-1">
+                    <p class="text-xs text-slate-500">Set custom wake and bedtime goals for each day of the week.</p>
+                    <div id="dayTargetsContainer" class="space-y-3"></div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-6 pt-3 border-t border-slate-100">
+                    <button onclick="closeSettingsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                    <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">Save Targets</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
     <script>
+        // CONFIGURATION: Replace with your actual Google Client ID from Google Cloud Console
+        const GOOGLE_CLIENT_ID = "614435866849-0v64use8p0mgcl24o7sm6plrgjeefth4.apps.googleusercontent.com
+";
+        
+        // OPTIONAL: Restrict access to a specific Google account email (set to null to allow any Google user)
+        const ALLOWED_EMAIL = "r.phelps07@gmail.com"; // Example: "your.email@gmail.com"
+
         const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -260,13 +289,13 @@
 
         let state = {
             targets: {
-                0: { wake: "09:00", sleep: "22:30" }, //sunday
-                1: { wake: "07:00", sleep: "22:30" }, //monday
-                2: { wake: "07:00", sleep: "22:30" }, //tuesday
-                3: { wake: "07:00", sleep: "22:30" }, //wednesday
-                4: { wake: "07:00", sleep: "22:30" }, //thursday
-                5: { wake: "07:00", sleep: "23:59" }, //friday
-                6: { wake: "09:00", sleep: "23:59" }  //saturday
+                0: { wake: "09:00", sleep: "22:30" },
+                1: { wake: "07:00", sleep: "22:30" },
+                2: { wake: "07:00", sleep: "22:30" },
+                3: { wake: "07:00", sleep: "22:30" },
+                4: { wake: "07:00", sleep: "22:30" },
+                5: { wake: "07:00", sleep: "23:59" },
+                6: { wake: "09:00", sleep: "23:59" }
             },
             logs: {},
             currentForm: { fruit: null, noSocial: null, floss: null, read: null }
@@ -275,7 +304,96 @@
         let wakeChartInstance = null;
         let bedChartInstance = null;
 
+        // --- AUTHENTICATION LOGIC ---
+
+        // Helper function to decode JWT token payload without external libraries
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+
         window.onload = function() {
+            checkAuthSession();
+        };
+
+        function checkAuthSession() {
+            const savedUser = sessionStorage.getItem('auth_user');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                showAppUI(user);
+            } else {
+                initGoogleAuth();
+            }
+        }
+
+        function initGoogleAuth() {
+            if (typeof google === 'undefined' || !google.accounts) {
+                setTimeout(initGoogleAuth, 100);
+                return;
+            }
+
+            // Initialize Google Identity Services
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse,
+                auto_select: true // Automatically logs in returning authorized users
+            });
+
+            // Render Google Sign-In Button
+            google.accounts.id.renderButton(
+                document.getElementById('googleBtnContainer'),
+                { theme: 'outline', size: 'large', type: 'standard' }
+            );
+
+            // Display Google One Tap UI prompt if applicable
+            google.accounts.id.prompt();
+        }
+
+        function handleCredentialResponse(response) {
+            const userData = parseJwt(response.credential);
+            
+            if (!userData) {
+                showAuthError("Failed to parse authentication response.");
+                return;
+            }
+
+            // Verify authorized account restriction if configured
+            if (ALLOWED_EMAIL && userData.email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+                showAuthError(`Access Denied: ${userData.email} is not authorized.`);
+                google.accounts.id.disableAutoSelect();
+                return;
+            }
+
+            // Store session
+            sessionStorage.setItem('auth_user', JSON.stringify(userData));
+            showAppUI(userData);
+        }
+
+        function showAuthError(msg) {
+            const errDiv = document.getElementById('authErrorMessage');
+            errDiv.innerText = msg;
+            errDiv.classList.remove('hidden');
+        }
+
+        function showAppUI(user) {
+            document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('appUI').classList.remove('hidden');
+
+            // Render User Header
+            document.getElementById('userName').innerText = user.name || user.email;
+            if (user.picture) {
+                document.getElementById('userAvatar').src = user.picture;
+            }
+
+            // Initialize App Data
             loadFromLocalStorage();
             
             const dateInput = document.getElementById('selectedDate');
@@ -288,7 +406,17 @@
             renderStats();
             renderCharts();
             renderHistory();
-        };
+        }
+
+        function handleSignOut() {
+            sessionStorage.removeItem('auth_user');
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.disableAutoSelect();
+            }
+            location.reload();
+        }
+
+        // --- APP DATA LOGIC ---
 
         function loadFromLocalStorage() {
             const savedTargets = localStorage.getItem('habit_targets_v2');
@@ -536,7 +664,6 @@
             });
         }
 
-        // Helper function to format date strings to e.g., "Mon 14th"
         function formatChartLabel(dateStr) {
             const dateObj = new Date(dateStr + 'T00:00:00');
             const dayOfWeek = SHORT_DAYS[dateObj.getDay()];
@@ -550,16 +677,13 @@
             return `${dayOfWeek} ${dayNum}${suffix}`;
         }
 
-        // Render Trend Line Charts using Chart.js (Restricted to past 4 weeks)
         function renderCharts() {
             const sortedDates = Object.keys(state.logs).sort();
 
-            // Determine date threshold for 4 weeks ago (28 days)
             const fourWeeksAgo = new Date();
             fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
             const fourWeeksAgoStr = fourWeeksAgo.toISOString().split('T')[0];
 
-            // Filter to only include logs from the past 4 weeks
             const chartDates = sortedDates.filter(d => d >= fourWeeksAgoStr);
 
             const wakeData = [];
