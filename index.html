@@ -1,26 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- ================================================================= -->
+    <!-- SECTION 1: PAGE SETUP, METADATA & EXTERNAL LIBRARIES               -->
+    <!-- ================================================================= -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Prevent Search Engine Indexing -->
+    <!-- Privacy & Security: Prevent search engines from indexing this page -->
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex, nofollow">
 
     <title>Habit & Sleep Accountability Partner</title>
     
-    <!-- Google Identity Services Library -->
+    <!-- Google Identity Services (Used for Google Sign-In button) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Tailwind CSS CDN -->
+    
+    <!-- Tailwind CSS (Styling framework used for UI layouts and colors) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
+    
+    <!-- Font Awesome Icons (Provides vector icons for buttons and cards) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
+    
+    <!-- Google Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN for Sleep Trends -->
+    
+    <!-- Chart.js (Library used to draw the Sleep & Wake line charts) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- Custom Helper Styles for Status Badges (Green, Amber, Red, Gray) -->
     <style>
         body { font-family: 'Inter', sans-serif; }
         .badge-green { background-color: #10B981; color: white; }
@@ -31,7 +39,9 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
-    <!-- Auth Guard Screen (Visible when NOT logged in) -->
+    <!-- ================================================================= -->
+    <!-- SECTION 2A: AUTHENTICATION OVERLAY (Shown when user is NOT logged in) -->
+    <!-- ================================================================= -->
     <div id="authOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
         <div class="bg-white max-w-md w-full rounded-2xl p-8 shadow-2xl text-center space-y-6">
             <div class="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
@@ -42,18 +52,22 @@
                 <p class="text-sm text-slate-500 mt-2">Sign in with Google to access your Habit & Sleep Tracker.</p>
             </div>
             
+            <!-- Dynamic error message block (e.g. Access Denied) -->
             <div id="authErrorMessage" class="hidden text-xs text-red-600 bg-red-50 p-3 rounded-lg font-medium border border-red-200"></div>
 
-            <!-- Google Sign In Button Target Container -->
+            <!-- Target container where Google renders the "Sign in with Google" button -->
             <div class="flex justify-center pt-2">
                 <div id="googleBtnContainer"></div>
             </div>
         </div>
     </div>
 
-    <!-- Main Application UI (Hidden until authenticated) -->
+    <!-- ================================================================= -->
+    <!-- SECTION 2B: MAIN APPLICATION UI (Hidden until authenticated)       -->
+    <!-- ================================================================= -->
     <div id="appUI" class="hidden">
-        <!-- Header Navigation -->
+        
+        <!-- --- HEADER & NAVBAR --- -->
         <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
                 <div class="flex items-center space-x-3">
@@ -65,12 +79,16 @@
                         <p class="text-xs text-slate-500 font-medium">Daily Accountability & Sleep Tracker</p>
                     </div>
                 </div>
+
+                <!-- User Profile & Action Bar -->
                 <div class="flex items-center space-x-3">
-                    <!-- User Account Info & Logout -->
+                    <!-- Logged-in User Profile Display -->
                     <div id="userInfo" class="flex items-center space-x-2 border-r border-slate-200 pr-3">
                         <img id="userAvatar" class="w-8 h-8 rounded-full border border-indigo-200" src="" alt="User Avatar">
                         <span id="userName" class="text-xs font-semibold text-slate-700 hidden sm:inline"></span>
                     </div>
+
+                    <!-- Header Action Buttons -->
                     <button onclick="handleSignOut()" class="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-1.5">
                         <i class="fa-solid fa-right-from-bracket"></i> Sign Out
                     </button>
@@ -88,20 +106,22 @@
             </div>
         </header>
 
+        <!-- --- MAIN DASHBOARD CONTENT --- -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-            <!-- Top Section: Habit Metrics Grid -->
+            
+            <!-- Dashboard Part 1: Top Metric Cards Grid (Streaks & Success Rates) -->
             <section>
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-slate-900">Habit Performance Overview</h2>
                     <span class="text-xs font-medium text-slate-500">Calculated across historical logs</span>
                 </div>
-                <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <!-- Stat Cards generated dynamically -->
-                </div>
+                <!-- Container dynamically filled by JavaScript function: renderStats() -->
+                <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4"></div>
             </section>
 
-            <!-- Trend Charts Section -->
+            <!-- Dashboard Part 2: Sleep & Wake Trend Line Charts -->
             <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Wake Up Chart Card -->
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
@@ -115,6 +135,7 @@
                     </div>
                 </div>
 
+                <!-- Bedtime Chart Card -->
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
@@ -129,9 +150,10 @@
                 </div>
             </section>
 
-            <!-- Main Body: Input Form & Historical Table -->
+            <!-- Dashboard Part 3: Form Input & Table Log -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Daily Logging Form -->
+                
+                <!-- Daily Logging Form (Left Column) -->
                 <section class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit">
                     <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
                         <h2 class="text-lg font-bold text-slate-900">Daily Logger</h2>
@@ -139,6 +161,7 @@
                     </div>
 
                     <form id="habitForm" onsubmit="saveDailyEntry(event)" class="space-y-5">
+                        <!-- Sleep & Wake Input Fields -->
                         <div class="space-y-3">
                             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Sleep & Wake Times</label>
                             <div>
@@ -162,8 +185,11 @@
                             </div>
                         </div>
 
+                        <!-- Habit Action Buttons (Done / Skipped / Missed) -->
                         <div class="space-y-4 pt-2">
                             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Daily Action Habits</label>
+                            
+                            <!-- Fruit Habit -->
                             <div class="habit-status-group" data-habit="fruit">
                                 <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
                                     <i class="fa-solid fa-apple-whole text-red-500"></i> Eat Fruit
@@ -175,6 +201,7 @@
                                 </div>
                             </div>
 
+                            <!-- Social Media Habit -->
                             <div class="habit-status-group" data-habit="noSocial">
                                 <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
                                     <i class="fa-solid fa-mobile-screen-button text-teal-600"></i> No Social > 9pm
@@ -186,6 +213,7 @@
                                 </div>
                             </div>
 
+                            <!-- Flossing Habit -->
                             <div class="habit-status-group" data-habit="floss">
                                 <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
                                     <i class="fa-solid fa-tooth text-blue-400"></i> Flossing Before Bed
@@ -197,6 +225,7 @@
                                 </div>
                             </div>
 
+                            <!-- Reading Habit -->
                             <div class="habit-status-group" data-habit="read">
                                 <span class="text-sm font-medium text-slate-700 block mb-1.5 flex items-center gap-2">
                                     <i class="fa-solid fa-book-open text-purple-500"></i> Reading Before Bed
@@ -209,13 +238,14 @@
                             </div>
                         </div>
 
+                        <!-- Save Entry Form Submission Button -->
                         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-indigo-100 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-check"></i> Save Daily Entry
                         </button>
                     </form>
                 </section>
 
-                <!-- Historical Log Table -->
+                <!-- Historical Log Table (Right Column) -->
                 <section class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                     <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
                         <h2 class="text-lg font-bold text-slate-900">Historical Log</h2>
@@ -236,16 +266,17 @@
                                     <th class="pb-3 px-2 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="historyTableBody" class="divide-y divide-slate-100">
-                                <!-- Dynamic history rows -->
-                            </tbody>
+                            <!-- Rows dynamically populated by renderHistory() -->
+                            <tbody id="historyTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
                 </section>
             </div>
         </main>
 
-        <!-- Target Times Modal -->
+        <!-- ================================================================= -->
+        <!-- SECTION 2D: TARGET TIMES CONFIGURATION MODAL (SETTINGS POPUP)      -->
+        <!-- ================================================================= -->
         <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
             <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl border border-slate-100 max-h-[90vh] flex flex-col">
                 <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
@@ -266,16 +297,26 @@
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
+    <!-- ================================================================= -->
+    <!-- SECTION 3 & 4: JAVASCRIPT LOGIC & APPLICATION ENGINE              -->
+    <!-- ================================================================= -->
     <script>
-        // CONFIGURATION: Replace with your actual Google Client ID from Google Cloud Console
+        // -----------------------------------------------------------------
+        // 3.1 APP CONFIGURATION & ALLOWED FAMILY ACCOUNTS
+        // -----------------------------------------------------------------
         const GOOGLE_CLIENT_ID = "614435866849-0v64use8p0mgcl24o7sm6plrgjeefth4.apps.googleusercontent.com";
-        // OPTIONAL: Restrict access to a specific Google account email (set to null to allow any Google user)
-        const ALLOWED_EMAIL = "r.phelps07@googlemail.com"; // Example: "your.email@gmail.com"
+        
+        // List of family emails authorized to access this website
+        const ALLOWED_EMAILS = [
+            "r.phelps07@googlemail.com",
+            "r.phelps07@gmail.com"
+        ];
 
+        // Day Name Helpers
         const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+        // Definition of tracked habits
         const HABITS = [
             { id: 'wake', name: 'Wake Up', icon: 'fa-sun', type: 'time' },
             { id: 'sleep', name: 'Bed Time', icon: 'fa-moon', type: 'time' },
@@ -285,7 +326,11 @@
             { id: 'read', name: 'Reading', icon: 'fa-book-open', type: 'action' }
         ];
 
+        // -----------------------------------------------------------------
+        // 3.2 APPLICATION DATA STATE
+        // -----------------------------------------------------------------
         let state = {
+            // Default target wake/sleep goals for each day (0 = Sun, 1 = Mon, ..., 6 = Sat)
             targets: {
                 0: { wake: "09:00", sleep: "22:30" },
                 1: { wake: "07:00", sleep: "22:30" },
@@ -295,16 +340,18 @@
                 5: { wake: "07:00", sleep: "23:59" },
                 6: { wake: "09:00", sleep: "23:59" }
             },
-            logs: {},
+            logs: {}, // Historical daily entries stored here
             currentForm: { fruit: null, noSocial: null, floss: null, read: null }
         };
 
         let wakeChartInstance = null;
         let bedChartInstance = null;
 
-        // --- AUTHENTICATION LOGIC ---
+        // -----------------------------------------------------------------
+        // 4.1 AUTHENTICATION LOGIC (Google Sign-In)
+        // -----------------------------------------------------------------
 
-        // Helper function to decode JWT token payload without external libraries
+        // Decodes token payload from Google to get name, email, and avatar
         function parseJwt(token) {
             try {
                 const base64Url = token.split('.')[1];
@@ -318,6 +365,7 @@
             }
         }
 
+        // On initial browser load, check if the user is already logged in
         window.onload = function() {
             checkAuthSession();
         };
@@ -332,29 +380,28 @@
             }
         }
 
+        // Render the Google Sign-In button
         function initGoogleAuth() {
             if (typeof google === 'undefined' || !google.accounts) {
                 setTimeout(initGoogleAuth, 100);
                 return;
             }
 
-            // Initialize Google Identity Services
             google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 callback: handleCredentialResponse,
-                auto_select: true // Automatically logs in returning authorized users
+                auto_select: false
             });
 
-            // Render Google Sign-In Button
             google.accounts.id.renderButton(
                 document.getElementById('googleBtnContainer'),
                 { theme: 'outline', size: 'large', type: 'standard' }
             );
 
-            // Display Google One Tap UI prompt if applicable
             google.accounts.id.prompt();
         }
 
+        // Callback function triggered when user logs into Google
         function handleCredentialResponse(response) {
             const userData = parseJwt(response.credential);
             
@@ -363,14 +410,17 @@
                 return;
             }
 
-            // Verify authorized account restriction if configured
-            if (ALLOWED_EMAIL && userData.email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+            const userEmail = userData.email ? userData.email.trim().toLowerCase() : "";
+            const isAllowed = ALLOWED_EMAILS.some(allowed => allowed.trim().toLowerCase() === userEmail);
+
+            if (!isAllowed) {
                 showAuthError(`Access Denied: ${userData.email} is not authorized.`);
-                google.accounts.id.disableAutoSelect();
+                if (typeof google !== 'undefined' && google.accounts) {
+                    google.accounts.id.disableAutoSelect();
+                }
                 return;
             }
 
-            // Store session
             sessionStorage.setItem('auth_user', JSON.stringify(userData));
             showAppUI(userData);
         }
@@ -385,13 +435,11 @@
             document.getElementById('authOverlay').classList.add('hidden');
             document.getElementById('appUI').classList.remove('hidden');
 
-            // Render User Header
             document.getElementById('userName').innerText = user.name || user.email;
             if (user.picture) {
                 document.getElementById('userAvatar').src = user.picture;
             }
 
-            // Initialize App Data
             loadFromLocalStorage();
             
             const dateInput = document.getElementById('selectedDate');
@@ -414,7 +462,9 @@
             location.reload();
         }
 
-        // --- APP DATA LOGIC ---
+        // -----------------------------------------------------------------
+        // 4.2 STORAGE & DATA MANAGEMENT (Local Storage, Import, Export)
+        // -----------------------------------------------------------------
 
         function loadFromLocalStorage() {
             const savedTargets = localStorage.getItem('habit_targets_v2');
@@ -429,22 +479,39 @@
             localStorage.setItem('habit_logs_v2', JSON.stringify(state.logs));
         }
 
-        function getTargetForDate(dateStr, type) {
-            const dateObj = new Date(dateStr + 'T00:00:00');
-            const dayOfWeek = dateObj.getDay();
-            return state.targets[dayOfWeek] ? state.targets[dayOfWeek][type] : "07:00";
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `habit_tracker_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
         }
 
-        function updateTargetLabels() {
-            const dateStr = document.getElementById('selectedDate').value;
-            if (!dateStr) return;
-            
-            const wakeTarget = getTargetForDate(dateStr, 'wake');
-            const sleepTarget = getTargetForDate(dateStr, 'sleep');
-
-            document.getElementById('targetWakeLabel').innerText = `Target: ${wakeTarget}`;
-            document.getElementById('targetSleepLabel').innerText = `Target: ${sleepTarget}`;
+        function importData(event) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.targets && imported.logs) {
+                        state = imported;
+                        saveToLocalStorage();
+                        updateTargetLabels();
+                        renderStats();
+                        renderCharts();
+                        renderHistory();
+                    }
+                } catch (err) {
+                    console.error("Invalid JSON import format.");
+                }
+            };
+            reader.readAsText(event.target.files[0]);
         }
+
+        // -----------------------------------------------------------------
+        // 4.3 SETTINGS & TARGET CONFIGURATION MODAL
+        // -----------------------------------------------------------------
 
         function openSettingsModal() {
             const container = document.getElementById('dayTargetsContainer');
@@ -494,6 +561,32 @@
             renderHistory();
         }
 
+        // -----------------------------------------------------------------
+        // 4.4 DAILY LOGGER FORM LOGIC
+        // -----------------------------------------------------------------
+
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function getTargetForDate(dateStr, type) {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = dateObj.getDay();
+            return state.targets[dayOfWeek] ? state.targets[dayOfWeek][type] : "07:00";
+        }
+
+        function updateTargetLabels() {
+            const dateStr = document.getElementById('selectedDate').value;
+            if (!dateStr) return;
+            
+            const wakeTarget = getTargetForDate(dateStr, 'wake');
+            const sleepTarget = getTargetForDate(dateStr, 'sleep');
+
+            document.getElementById('targetWakeLabel').innerText = `Target: ${wakeTarget}`;
+            document.getElementById('targetSleepLabel').innerText = `Target: ${sleepTarget}`;
+        }
+
         function evaluateTimeHabit(actualTime, targetTime) {
             if (!actualTime) return { status: 'None', label: 'Unrecorded', class: 'badge-gray' };
 
@@ -508,11 +601,6 @@
             } else {
                 return { status: 'Red', label: actualTime, class: 'badge-red', color: '#EF4444' };
             }
-        }
-
-        function timeToMinutes(timeStr) {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            return hours * 60 + minutes;
         }
 
         function handleDateChange(e) {
@@ -577,6 +665,10 @@
             renderCharts();
             renderHistory();
         }
+
+        // -----------------------------------------------------------------
+        // 4.5 DASHBOARD RENDERING (Stats, Charts, Historical Table)
+        // -----------------------------------------------------------------
 
         function calculateHabitStats(habit) {
             const sortedDates = Object.keys(state.logs).sort();
@@ -847,36 +939,6 @@
             renderStats();
             renderCharts();
             renderHistory();
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-            const dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `habit_tracker_backup_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(dlAnchor);
-            dlAnchor.click();
-            dlAnchor.remove();
-        }
-
-        function importData(event) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.targets && imported.logs) {
-                        state = imported;
-                        saveToLocalStorage();
-                        updateTargetLabels();
-                        renderStats();
-                        renderCharts();
-                        renderHistory();
-                    }
-                } catch (err) {
-                    console.error("Invalid JSON import format.");
-                }
-            };
-            reader.readAsText(event.target.files[0]);
         }
     </script>
 </body>
